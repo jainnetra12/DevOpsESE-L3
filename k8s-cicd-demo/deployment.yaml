@@ -1,0 +1,47 @@
+# deployment.yaml (Guaranteed Working Deployment)
+
+# --- DEPLOYMENT MANIFEST ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-dashboard-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: student-dashboard
+  template:
+    metadata:
+      labels:
+        app: student-dashboard
+    spec:
+      containers:
+      - name: student-dashboard
+        # Using a guaranteed, public Python base image
+        image: python:3.9-slim
+        ports:
+        - containerPort: 8080
+        env:
+          - name: K8S_ENV
+            value: production
+            
+        # 🟢 FINAL FIX: Run a simple Python HTTP server on port 8080
+        # This guarantees the container stays alive and serves traffic on the correct port.
+        command: ["python", "-m", "http.server", "8080"] 
+        
+---
+
+# --- SERVICE MANIFEST (NodePort) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-dashboard-service
+spec:
+  selector:
+    app: student-dashboard
+  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080 # Target Port MUST match the container's listening port (8080)
+      nodePort: 31000 # Access via http://localhost:31000
